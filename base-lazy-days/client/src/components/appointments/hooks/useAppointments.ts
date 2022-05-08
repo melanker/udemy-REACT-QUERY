@@ -1,4 +1,3 @@
-// @ts-nocheck
 import dayjs from 'dayjs';
 import {
   Dispatch,
@@ -22,7 +21,7 @@ const commonOptions = {
   cacheTime: 300000, // 5 minutes
 };
 
-// for useQuery call
+// query function for useQuery call
 async function getAppointments(
   year: string,
   month: string,
@@ -75,22 +74,22 @@ export function useAppointments(): UseAppointments {
   const selectFn = useCallback((data) => getAvailableAppointments(data, user), [
     user,
   ]);
-
   /** ****************** END 2: filter appointments  ******************** */
   /** ****************** START 3: useQuery  ***************************** */
   // useQuery call for appointments for the current monthYear
 
+  // prefetch next month when monthYear changes
   const queryClient = useQueryClient();
-
   useEffect(() => {
+    // assume increment of one month
     const nextMonthYear = getNewMonthYear(monthYear, 1);
     queryClient.prefetchQuery(
       [queryKeys.appointments, nextMonthYear.year, nextMonthYear.month],
-      getAppointments(nextMonthYear.year, nextMonthYear.month),
+      () => getAppointments(nextMonthYear.year, nextMonthYear.month),
       commonOptions,
     );
-  }, [monthYear, queryClient]);
-  // TODO: update with useQuery!
+  }, [queryClient, monthYear]);
+
   // Notes:
   //    1. appointments is an AppointmentDateMap (object with days of month
   //       as properties, and arrays of appointments for that day as values)
@@ -98,6 +97,7 @@ export function useAppointments(): UseAppointments {
   //    2. The getAppointments query function needs monthYear.year and
   //       monthYear.month
   const fallback = {};
+
   const { data: appointments = fallback } = useQuery(
     [queryKeys.appointments, monthYear.year, monthYear.month],
     () => getAppointments(monthYear.year, monthYear.month),
@@ -105,9 +105,9 @@ export function useAppointments(): UseAppointments {
       select: showAll ? undefined : selectFn,
       ...commonOptions,
       refetchOnMount: true,
-      refetchOnWindowFocus: true,
       refetchOnReconnect: true,
-      refetchInterval: 60000, // every minute,
+      refetchOnWindowFocus: true,
+      refetchInterval: 60000, // 60 seconds
     },
   );
 
